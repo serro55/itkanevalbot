@@ -17,7 +17,7 @@ ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 student_messages = {}
 
-NAME, AGE = range(2)  # الآن نطلب الاسم والعمر
+NAME, AGE = range(2)
 
 # 🌸 START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -25,12 +25,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """🔸️🔶️ İtkan | Kur’an Akademisi'ne hoş geldiniz
 
 Kur’an tilavetiniz özenle değerlendirilecektir 📖🔍
-
-🎯 Amacımız:
-Sizi doğru seviyeden başlatıp en kısa sürede ilerletmek
-
-💪 Unutmayın:
-Düzenli çalışma ve istikrar başarıyı getirir
 
 👤 İsminizi & soyisminizi yazınız:"""
     )
@@ -48,13 +42,30 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
+# ❌ منع الفويس بدون تسجيل
+async def reject_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if "name" not in context.user_data or "age" not in context.user_data:
+        await update.message.reply_text(
+            """⚠️ Lütfen önce kayıt olun
+
+👤 İsminizi ve soyisminizi yazın
+🪻 Ardından yaşınızı girin
+
+Sonrasında ses kaydı gönderebilirsiniz 🎧"""
+        )
+        return True
+    return False
+
 # 🎧 استقبال الصوت
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if await reject_voice(update, context):
+        return
+
     user = update.message.from_user
     voice = update.message.voice.file_id
 
-    name = context.user_data.get("name", "Bilinmiyor")
-    age = context.user_data.get("age", "Bilinmiyor")
+    name = context.user_data.get("name")
+    age = context.user_data.get("age")
 
     sent = await context.bot.send_voice(chat_id=GROUP_ID, voice=voice)
     student_messages[sent.message_id] = user.id
@@ -70,23 +81,11 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-    # 📩 الرسالة الأولى بعد إرسال الصوت
     await context.bot.send_message(
         chat_id=user.id,
         text="""🎧 Ses kaydınız başarıyla alındı
 
-⏳ En kısa sürede değerlendirilecektir inşallah
-
-🌱 Sabırlı olun, her kayıt sizi daha iyiye taşır 🧡"""
-    )
-
-    await asyncio.sleep(3)
-
-    # 📩 الرسالة الثانية (تسويقية)
-    await context.bot.send_message(
-        chat_id=user.id,
-        text="""📢 Daha fazla kişiye ulaşmak ve hayra vesile olmak için kanalımızı paylaşabilirsiniz:
-https://t.me/itkanakademi"""
+⏳ En kısa sürede değerlendirilecektir inşallah"""
     )
 
 # ⭐ التقييم
@@ -97,7 +96,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = int(query.data.split("_")[1])
 
     keyboard = [
-        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi seviye)", callback_data=f"level_nurani_{message_id}")],
+        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi)", callback_data=f"level_nurani_{message_id}")],
         [InlineKeyboardButton("🟡 Başlangıç", callback_data=f"level_beginner_{message_id}")],
         [InlineKeyboardButton("🟠 Orta Seviye", callback_data=f"level_intermediate_{message_id}")],
         [InlineKeyboardButton("🔴 İleri Seviye", callback_data=f"level_advanced_{message_id}")]
@@ -108,7 +107,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 📊 تحديد المستوى
+# 📊 اختيار المستوى
 async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -120,9 +119,6 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not student_id:
         return
 
-    name = context.user_data.get("name", "")
-    age = context.user_data.get("age", "")
-
     levels = {
         "nurani": "🔵📖 Kaide-i Nuraniyye",
         "beginner": "🟡 Başlangıç",
@@ -130,63 +126,26 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "advanced": "🔴 İleri Seviye"
     }
 
-    next_level_text = {
-        "nurani": "🟡 Başlangıç seviyesine ulaşmanız",
-        "beginner": "🟠 Orta seviyeye ulaşmanız",
-        "intermediate": "🔴 İleri seviyeye ulaşmanız",
-        "advanced": "👑 İtkan seviyesinde tam yetkinlik ve ardından öğretmenlik yolculuğuna başlamak"
-    }
+    # ✅ حذف الأزرار
+    await query.message.edit_reply_markup(reply_markup=None)
 
-    if level == "nurani":
-        level_message = f"""📊 Seviye Sonucunuz:
+    # ✅ رسالة للمعلمة
+    await query.message.reply_text(
+        f"✅ Seviye gönderildi: {levels[level]}"
+    )
+
+    # ✅ إرسال للطالبة
+    await context.bot.send_message(
+        chat_id=student_id,
+        text=f"""📊 Seviye Sonucunuz:
 {levels[level]}
 
-🌱 {name}, Kur’an yolculuğunuza sağlam bir temel atarak başlıyorsunuz.
-Her adımınız sizi daha güçlü ve bilinçli bir okuyucu yapacak 💪
-İyi bir başlangıç, ilerideki seviyelerin anahtarıdır 🔑
-"""
-    elif level == "advanced":
-        level_message = f"""📊 Seviye Sonucunuz:
-{levels[level]}
+🌱 Değerlendirmeniz tamamlandı
+📚 Seviyenize uygun dersleri takip edebilirsiniz
 
-🌟 {name}, artık ileri seviyeye ulaştınız
-
-Her öğrendiğiniz bilgi ve tilavetiniz bir emanettir 🕊️
-İyi bir temelle ilerleyerek Kur’an’ı en güzel şekilde okuyabilirsiniz
-
-🎯 Hedefiniz: Tam İtkan seviyesinde yetkinlik ve ardından öğretmenlik yolculuğuna başlamak 🧡
-İtkan hazırlık kursuna katılarak öğrendiklerinizi aktarabilir ve başkalarına rehber olabilirsiniz 🌱
-"""
-    else:
-        level_message = f"""📊 Seviye Sonucunuz:
-{levels[level]}
-
-🌸 Maşallah {name}, güzel bir ilerleme
-
-🎯 Hedef:
-{next_level_text[level]}
-"""
-
-    full_message = f"""{level_message}
-📌 Sizin için bir gelişim dosyası oluşturuldu
-
-📌 Tilavetinize dair tüm değerlendirme notları kaydedildi
-
-🧕🏻 Seviyenize uygun öğretmenimize iletilecek
-ve sizin gelişiminiz adım adım takip edilecektir
-
-🌱 Bu yolculukta yalnız değilsiniz
-İtkan ailesi olarak her zaman yanınızdayız 🧡
-
-📚 Seviyenize uygun dersleri ana kanalımızdan takip ederek bir üst seviyeye en kısa sürede ulaşabilirsiniz
-
-📢 Kanalımız:
-https://t.me/itkanakademi
-
-🤲 Allah size Kur’an’ı en güzel şekilde okumayı nasip etsin
-"""
-
-    await context.bot.send_message(chat_id=student_id, text=full_message)
+📢 Kanal:
+https://t.me/itkanakademi"""
+    )
 
 # ⚠️ إعادة الإرسال
 async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -201,16 +160,10 @@ async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=student_id,
-        text="""⚠️ Lütfen dikkat
+        text="""⚠️ Lütfen tekrar gönderiniz
 
-📖 İstenen ayet: Fetih Suresi 29. ayet
-
-🎧 Lütfen tekrar gönderiniz
-
-🤲 Allah yardımcınız olsun"""
+📖 Fetih Suresi 29. ayet"""
     )
-
-    await query.message.reply_text("🔁 Öğrenciye geri gönderildi.")
 
 # 💬 رد المعلمة
 async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -227,15 +180,10 @@ async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=student_id,
             text=f"""📊 Değerlendirme:
 
-{update.message.text}
-
-🌸 Gayretiniz çok kıymetli, devam edin 🧡
-
-📢 Kanalımız:
-https://t.me/itkanakademi"""
+{update.message.text}"""
         )
 
-# تشغيل البوت
+# تشغيل
 app = ApplicationBuilder().token(TOKEN).build()
 
 conv = ConversationHandler(
