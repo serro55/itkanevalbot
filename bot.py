@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -15,13 +16,24 @@ GROUP_ID = int(os.getenv("GROUP_ID"))
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 student_messages = {}
-student_answers = {}
 
 NAME, AGE = range(2)
 
-# 🌿 تسجيل
+# 🌸 START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🧕🏻 İsminizi & soyjsminizi yazınız:")
+    await update.message.reply_text(
+        """🌸 İTKAN | Kur’an Akademisi'ne hoş geldiniz
+
+Kur’an tilavetiniz özenle değerlendirilecektir 📖🔍
+
+🎯 Amacımız:
+Sizi doğru seviyeden başlatıp en kısa sürede ilerletmek
+
+💪 Unutmayın:
+Düzenli çalışma ve istikrar başarıyı getirir
+
+🧕🏻 İsminizi & soyisminizi yazınız:"""
+    )
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -37,7 +49,7 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# 🎤 استقبال الصوت
+# 🎧 استقبال الصوت
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     voice = update.message.voice.file_id
@@ -60,6 +72,26 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+    # 📩 الرسالة الأولى
+    await context.bot.send_message(
+        chat_id=user.id,
+        text="""🎧 Ses kaydınız başarıyla alındı
+
+⏳ En kısa sürede değerlendirilecektir inşallah
+
+🌱 Sabırlı olun, her kayıt sizi daha iyiye taşır 🧡"""
+    )
+
+    # ⏳ تأخير بسيط
+    await asyncio.sleep(3)
+
+    # 📩 الرسالة الثانية (تسويق)
+    await context.bot.send_message(
+        chat_id=user.id,
+        text="""📢 Daha fazla kişiye ulaşmak ve hayra vesile olmak için kanalımızı paylaşabilirsiniz:
+https://t.me/itkanakademi"""
+    )
+
 # ⭐ التقييم
 async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -68,7 +100,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = int(query.data.split("_")[1])
 
     keyboard = [
-        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi)", callback_data=f"level_nurani_{message_id}"),
+        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi seviye)", callback_data=f"level_nurani_{message_id}")],
         [InlineKeyboardButton("🟡 Başlangıç", callback_data=f"level_beginner_{message_id}")],
         [InlineKeyboardButton("🟠 Orta Seviye", callback_data=f"level_intermediate_{message_id}")],
         [InlineKeyboardButton("🔴 İleri Seviye", callback_data=f"level_advanced_{message_id}")]
@@ -91,6 +123,8 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not student_id:
         return
 
+    name = context.user_data.get("name", "")
+
     levels = {
         "nurani": "🔵📖 Kaide-i Nuraniyye",
         "beginner": "🟡 Başlangıç",
@@ -98,16 +132,44 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "advanced": "🔴 İleri Seviye"
     }
 
+    next_level_text = {
+        "nurani": "🟡 Başlangıç seviyesine ulaşmanız",
+        "beginner": "🟠 Orta seviyeye ulaşmanız",
+        "intermediate": "🔴 İleri seviyeye ulaşmanız",
+        "advanced": "🌟 İtkan seviyesine ulaşmanız"
+    }
+
     await context.bot.send_message(
         chat_id=student_id,
-        text=f"""📊 Seviye: {levels[level]}
+        text=f"""📊 Seviye Sonucunuz:
+{levels[level]}
 
-📌 Gelişim kaydınız oluşturulmuştur.
+🌸 Maşallah {name}, güzel bir ilerleme
 
-🤲 Allah bize Kur’an’ı Resûlullah (s.a.v) gibi okumayı nasip etsin."""
+📌 Sizin için bir gelişim dosyası oluşturuldu
+
+📌 Tilavetinize dair tüm değerlendirme notları kaydedildi
+
+👩‍🏫 Seviyenize uygun öğretmenimize iletilecek
+ve sizin gelişiminiz adım adım takip edilecektir
+
+🌱 Bu yolculukta yalnız değilsiniz
+İTKAN ailesi olarak her zaman yanınızdayız 🧡
+
+🎯 Hedef:
+{next_level_text[level]}
+
+💡 Düzenli ders ve pratik ile hızlı ilerleyebilirsiniz
+
+📚 Seviyenize uygun dersleri ana kanalımızdan takip ederek bir üst seviyeye en kısa sürede ulaşabilirsiniz
+
+📢 Kanalımız:
+https://t.me/itkanakademi
+
+🤲 Allah size Kur’an’ı en güzel şekilde okumayı nasip etsin"""
     )
 
-# ⚠️ إعادة الإرسال + تذكير بالآية
+# ⚠️ إعادة الإرسال
 async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -122,28 +184,14 @@ async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=student_id,
         text="""⚠️ Lütfen dikkat
 
-📖 Sizden istenen ayet: Fetih Suresi 29. ayet
+📖 İstenen ayet: Fetih Suresi 29. ayet
 
-🎧 Lütfen bu ayeti tekrar ses kaydı olarak gönderiniz.
+🎧 Lütfen tekrar gönderiniz
 
-🤲 Allah yardımcınız olsun."""
+🤲 Allah yardımcınız olsun"""
     )
 
     await query.message.reply_text("🔁 Öğrenciye geri gönderildi.")
-
-# 👩‍🏫 لوحة المعلمة
-async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        return
-
-    keyboard = [
-        [InlineKeyboardButton("📊 Panel", callback_data="admin")]
-    ]
-
-    await update.message.reply_text(
-        "👩‍🏫 Yönetim Paneli",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
 
 # 💬 رد المعلمة
 async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -158,7 +206,14 @@ async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if student_id:
         await context.bot.send_message(
             chat_id=student_id,
-            text=f"📊 Değerlendirme:\n\n{update.message.text}"
+            text=f"""📊 Değerlendirme:
+
+{update.message.text}
+
+🌸 Gayretiniz çok kıymetli, devam edin 🧡
+
+📢 Kanalımız:
+https://t.me/itkanakademi"""
         )
 
 # تشغيل
@@ -174,7 +229,6 @@ conv = ConversationHandler(
 )
 
 app.add_handler(conv)
-app.add_handler(CommandHandler("admin", admin_panel))
 app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 app.add_handler(MessageHandler(filters.TEXT & filters.Chat(GROUP_ID), group_reply))
 
