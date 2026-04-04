@@ -14,43 +14,42 @@ GROUP_ID = int(os.getenv("GROUP_ID"))
 
 # ربط الرسائل بالطلاب
 student_messages = {}
+student_answers = {}
 
-# 🚀 Başlangıç
+# 🚀 Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🌿 Hoş geldiniz!\n\n"
-        "Kur’an tilavetinizi geliştirme yolunda attığınız bu adım çok kıymetlidir.\n\n"
-        "<b>🎙️ Lütfen Fetih Suresi 29. ayeti ses kaydı olarak gönderiniz.</b>\n\n"
-        "📌 İTKAN | Kur’an Akademisi",
-        parse_mode="HTML"
+        "🎙️ Lütfen Fetih Suresi 29. ayeti ses kaydı olarak gönderiniz.\n\n"
+        "📌 İTKAN | Kur’an Akademisi"
     )
 
-# 🎤 Ses alma
+# 🎤 استقبال الصوت
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     voice = update.message.voice.file_id
 
-    # إرسال للجروب
-    sent_message = await context.bot.send_voice(
+    sent = await context.bot.send_voice(
         chat_id=GROUP_ID,
         voice=voice
     )
 
-    # حفظ الربط
-    student_messages[sent_message.message_id] = user.id
+    # ربط الرسالة
+    student_messages[sent.message_id] = user.id
 
-    text = f"""🎧 Yeni tilavet gönderildi
+    await context.bot.send_message(
+        chat_id=GROUP_ID,
+        text=f"""🎧 Yeni tilavet gönderildi
 
 👤 Öğrenci: {user.first_name}
 🆔 ID: {user.id}
 
-📌 İTKAN | Kur’an Akademisi"""
-
-    await context.bot.send_message(chat_id=GROUP_ID, text=text)
+📌 İTKAN"""
+    )
 
     # زر التقييم
     keyboard = [
-        [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent_message.message_id}")]
+        [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent.message_id}")]
     ]
 
     await context.bot.send_message(
@@ -58,6 +57,26 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text="👇",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+    # سؤال التجويد
+    keyboard2 = [
+        [InlineKeyboardButton("✅ Evet", callback_data="tajweed_yes")],
+        [InlineKeyboardButton("❌ Hayır", callback_data="tajweed_no")]
+    ]
+
+    await update.message.reply_text(
+        "📌 Tecvid eğitimi aldınız mı?",
+        reply_markup=InlineKeyboardMarkup(keyboard2)
+    )
+
+# 👩‍🎓 جواب التجويد
+async def handle_tajweed(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    student_answers[query.from_user.id] = "Evet" if query.data == "tajweed_yes" else "Hayır"
+
+    await query.message.reply_text("✅ Cevabınız kaydedildi.")
 
 # ⭐ فتح التقييم
 async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -78,7 +97,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 📊 تحليل + إرسال
+# 📊 التقييم + تحليل + توجيه
 async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -92,18 +111,20 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("❌ Öğrenci bulunamadı.")
         return
 
+    tajweed = student_answers.get(student_id, "Bilinmiyor")
+
     level_map = {
-        "nurani": "📖 Kaide-i Nuraniyye (ön başlangıç)",
+        "nurani": "📖 Kaide-i Nuraniyye",
         "beginner": "🟢 Başlangıç",
         "intermediate": "🟡 Orta",
         "advanced": "🔵 İleri"
     }
 
-    analysis_map = {
-        "nurani": "🔍 Analiz: Harfleri doğru öğrenmek için temel eğitime ihtiyacın var.",
-        "beginner": "🔍 Analiz: Temel seviyede ilerliyorsun, telaffuzunu geliştirmeye devam et.",
-        "intermediate": "🔍 Analiz: Orta seviyedesin, tecvid kurallarına daha fazla dikkat et.",
-        "advanced": "🔍 Analiz: Çok iyi bir seviyedesin, artık detaylara odaklanabilirsin."
+    advice_map = {
+        "nurani": "📌 Harfleri öğrenmeye odaklan\n🎧 Günlük dinleme + tekrar\n👩‍🏫 Nuraniyye derslerine katıl",
+        "beginner": "📌 Temel tecvid\n🎧 15 dk سماعي ختمة\n👩‍🏫 Başlangıç حلقات التلاوة",
+        "intermediate": "📌 Med + gunne\n🎧 سماعي ختمة\n👩‍🏫 Orta seviye dersler",
+        "advanced": "📌 İleri teknikler\n🎧 Uzun dinleme\n👩‍🏫 İleri seviye حلقات"
     }
 
     await context.bot.send_message(
@@ -112,19 +133,52 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 {level_map[level]}
 
-{analysis_map[level]}
+Tecvid: {tajweed}
 
-📌 İTKAN | Kur’an Akademisi"""
+{advice_map[level]}
+
+🎧 Öneri:
+• Şeyh :contentReference[oaicite:0]{index=0} tilavetini dinleyin
+• سماعي ختمة yapın (sadece dinleme)
+
+🌿 İTKAN ile devam edin"""
     )
 
-    await query.message.reply_text("✅ Değerlendirme öğrenciye gönderildi.")
+    await query.message.reply_text("✅ Gönderildi")
+
+# 💬 رد المعلمة داخل الجروب
+async def handle_group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message
+
+    if message.chat.id != GROUP_ID:
+        return
+
+    if not message.reply_to_message:
+        return
+
+    replied_id = message.reply_to_message.message_id
+
+    student_id = student_messages.get(replied_id)
+
+    if not student_id:
+        return
+
+    if not message.text:
+        return
+
+    await context.bot.send_message(
+        chat_id=student_id,
+        text=f"📊 Değerlendirmeniz:\n\n{message.text}\n\n📌 İTKAN"
+    )
 
 # تشغيل البوت
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+app.add_handler(CallbackQueryHandler(handle_tajweed, pattern="^tajweed_"))
 app.add_handler(CallbackQueryHandler(handle_rate, pattern="^rate_"))
 app.add_handler(CallbackQueryHandler(handle_level, pattern="^level_"))
+app.add_handler(MessageHandler(filters.TEXT & filters.Chat(GROUP_ID), handle_group_reply))
 
 app.run_polling()
