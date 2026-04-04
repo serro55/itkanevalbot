@@ -26,6 +26,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Kur’an tilavetiniz özenle değerlendirilecektir 📖🔍
 
+🎯 Amacımız:
+Sizi doğru seviyeden başlatıp en kısa sürede ilerletmek
+
 👤 İsminizi & soyisminizi yazınız:"""
     )
     return NAME
@@ -42,37 +45,21 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# ❌ منع الفويس بدون تسجيل
-async def reject_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "name" not in context.user_data or "age" not in context.user_data:
-        await update.message.reply_text(
-            """⚠️ Lütfen önce kayıt olun
-
-👤 İsminizi ve soyisminizi yazın
-🪻 Ardından yaşınızı girin
-
-Sonrasında ses kaydı gönderebilirsiniz 🎧"""
-        )
-        return True
-    return False
-
-# 🎧 استقبال الصوت
+# 🎧 استقبال الصوت (مسموح دائماً)
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await reject_voice(update, context):
-        return
-
     user = update.message.from_user
     voice = update.message.voice.file_id
 
-    name = context.user_data.get("name")
-    age = context.user_data.get("age")
+    name = context.user_data.get("name", "İsim yok")
+    age = context.user_data.get("age", "Yaş yok")
 
     sent = await context.bot.send_voice(chat_id=GROUP_ID, voice=voice)
     student_messages[sent.message_id] = user.id
 
     keyboard = [
         [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent.message_id}")],
-        [InlineKeyboardButton("⚠️ Tekrar gönder", callback_data=f"return_{sent.message_id}")]
+        [InlineKeyboardButton("⚠️ Tekrar gönder", callback_data=f"return_{sent.message_id}")],
+        [InlineKeyboardButton("👤 İsim hatırlat", callback_data=f"remind_{sent.message_id}")]
     ]
 
     await context.bot.send_message(
@@ -81,11 +68,22 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+    # رسالة للطالب
     await context.bot.send_message(
         chat_id=user.id,
         text="""🎧 Ses kaydınız başarıyla alındı
 
-⏳ En kısa sürede değerlendirilecektir inşallah"""
+⏳ En kısa sürede değerlendirilecektir inşallah
+
+🌱 Sabırlı olun, her kayıt sizi daha iyiye taşır 🧡"""
+    )
+
+    await asyncio.sleep(2)
+
+    await context.bot.send_message(
+        chat_id=user.id,
+        text="""📢 Kanalımızı paylaşabilirsiniz:
+https://t.me/itkanakademi"""
     )
 
 # ⭐ التقييم
@@ -126,26 +124,47 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "advanced": "🔴 İleri Seviye"
     }
 
-    # ✅ حذف الأزرار
+    # حذف الأزرار
     await query.message.edit_reply_markup(reply_markup=None)
 
-    # ✅ رسالة للمعلمة
+    # رسالة للمعلمة
     await query.message.reply_text(
         f"✅ Seviye gönderildi: {levels[level]}"
     )
 
-    # ✅ إرسال للطالبة
+    # رسالة للطالبة
     await context.bot.send_message(
         chat_id=student_id,
         text=f"""📊 Seviye Sonucunuz:
 {levels[level]}
 
-🌱 Değerlendirmeniz tamamlandı
+📌 Değerlendirmeniz tamamlandı
+
 📚 Seviyenize uygun dersleri takip edebilirsiniz
 
-📢 Kanal:
+📢 Kanalımız:
 https://t.me/itkanakademi"""
     )
+
+# 👤 تذكير الاسم
+async def handle_remind(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    message_id = int(query.data.split("_")[1])
+    student_id = student_messages.get(message_id)
+
+    if not student_id:
+        return
+
+    await context.bot.send_message(
+        chat_id=student_id,
+        text="""👤 Lütfen isminizi ve soyisminizi yazmayı unutmayın
+
+Bu, değerlendirmenizin daha doğru yapılabilmesi için gereklidir 🌸"""
+    )
+
+    await query.message.reply_text("📩 Hatırlatma gönderildi")
 
 # ⚠️ إعادة الإرسال
 async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -180,7 +199,9 @@ async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=student_id,
             text=f"""📊 Değerlendirme:
 
-{update.message.text}"""
+{update.message.text}
+
+🌸 Gayretiniz çok kıymetli 🧡"""
         )
 
 # تشغيل
@@ -202,5 +223,6 @@ app.add_handler(MessageHandler(filters.TEXT & filters.Chat(GROUP_ID), group_repl
 app.add_handler(CallbackQueryHandler(handle_rate, pattern="^rate_"))
 app.add_handler(CallbackQueryHandler(handle_level, pattern="^level_"))
 app.add_handler(CallbackQueryHandler(handle_return, pattern="^return_"))
+app.add_handler(CallbackQueryHandler(handle_remind, pattern="^remind_"))
 
 app.run_polling()
