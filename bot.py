@@ -19,7 +19,7 @@ student_answers = {}
 
 NAME, AGE = range(2)
 
-# 🌿 بدء التسجيل
+# 🌿 تسجيل
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🌿 İsminizi yazınız:")
     return NAME
@@ -33,10 +33,8 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["age"] = update.message.text
 
     await update.message.reply_text(
-        "✅ Kayıt tamamlandı.\n\n"
-        "🎧 Şimdi Fetih Suresi 29. ayetini ses olarak gönderiniz."
+        "🎧 Lütfen Fetih Suresi 29. ayetini ses kaydı olarak gönderiniz."
     )
-
     return ConversationHandler.END
 
 # 🎤 استقبال الصوت
@@ -51,29 +49,18 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     student_messages[sent.message_id] = user.id
 
-    await context.bot.send_message(
-        chat_id=GROUP_ID,
-        text=f"👤 {name} ({age})"
-    )
-
     keyboard = [
-        [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent.message_id}")]
+        [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent.message_id}")],
+        [InlineKeyboardButton("⚠️ Tekrar gönder", callback_data=f"return_{sent.message_id}")]
     ]
 
     await context.bot.send_message(
         chat_id=GROUP_ID,
-        text="👇",
+        text=f"👤 {name} ({age})",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 🎚️ هل عندها تجويد
-async def tajweed(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    student_answers[query.from_user.id] = "Evet" if query.data == "tajweed_yes" else "Hayır"
-
-# ⭐ تقييم
+# ⭐ التقييم
 async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -104,7 +91,7 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not student_id:
         return
 
-    level_text = {
+    levels = {
         "nurani": "🔵📖 Kaide-i Nuraniyye",
         "beginner": "🟡 Başlangıç",
         "intermediate": "🟠 Orta Seviye",
@@ -113,16 +100,36 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=student_id,
-        text=f"""📊 Seviye: {level_text[level]}
+        text=f"""📊 Seviye: {levels[level]}
 
-📌 Size özel bir gelişim kaydı oluşturulmuştur.
+📌 Gelişim kaydınız oluşturulmuştur.
 
-Her adımda sizi takip ederek hatalarınızı düzelteceğiz.
-
-🤲 Allah bize Kur’an’ı Resûlullah (s.a.v) gibi okumayı ve onunla amel etmeyi nasip etsin."""
+🤲 Allah bize Kur’an’ı Resûlullah (s.a.v) gibi okumayı nasip etsin."""
     )
 
-    await query.message.reply_text("✅ Gönderildi")
+# ⚠️ إعادة الإرسال + تذكير بالآية
+async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    message_id = int(query.data.split("_")[1])
+    student_id = student_messages.get(message_id)
+
+    if not student_id:
+        return
+
+    await context.bot.send_message(
+        chat_id=student_id,
+        text="""⚠️ Lütfen dikkat
+
+📖 Sizden istenen ayet: Fetih Suresi 29. ayet
+
+🎧 Lütfen bu ayeti tekrar ses kaydı olarak gönderiniz.
+
+🤲 Allah yardımcınız olsun."""
+    )
+
+    await query.message.reply_text("🔁 Öğrenciye geri gönderildi.")
 
 # 👩‍🏫 لوحة المعلمة
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -130,33 +137,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     keyboard = [
-        [InlineKeyboardButton("📊 Öğrenciler", callback_data="admin_students")]
+        [InlineKeyboardButton("📊 Panel", callback_data="admin")]
     ]
 
     await update.message.reply_text(
         "👩‍🏫 Yönetim Paneli",
         reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-# 🏅 شهادة يدوية
-async def send_certificate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        return
-
-    try:
-        student_id = int(context.args[0])
-        name = " ".join(context.args[1:])
-    except:
-        await update.message.reply_text("❌ Kullanım: /cert id isim")
-        return
-
-    await context.bot.send_message(
-        chat_id=student_id,
-        text=f"""🏅 Tebrikler {name}!
-
-Kur’an tilavetindeki ilerlemeniz için bu sertifika verilmiştir.
-
-🌿 İTİKAN Kur’an Akademisi"""
     )
 
 # 💬 رد المعلمة
@@ -175,7 +161,7 @@ async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"📊 Değerlendirme:\n\n{update.message.text}"
         )
 
-# تشغيل البوت
+# تشغيل
 app = ApplicationBuilder().token(TOKEN).build()
 
 conv = ConversationHandler(
@@ -189,12 +175,11 @@ conv = ConversationHandler(
 
 app.add_handler(conv)
 app.add_handler(CommandHandler("admin", admin_panel))
-app.add_handler(CommandHandler("cert", send_certificate))
-
 app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 app.add_handler(MessageHandler(filters.TEXT & filters.Chat(GROUP_ID), group_reply))
 
 app.add_handler(CallbackQueryHandler(handle_rate, pattern="^rate_"))
 app.add_handler(CallbackQueryHandler(handle_level, pattern="^level_"))
+app.add_handler(CallbackQueryHandler(handle_return, pattern="^return_"))
 
 app.run_polling()
