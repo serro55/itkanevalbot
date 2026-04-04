@@ -29,6 +29,9 @@ Kur’an tilavetiniz özenle değerlendirilecektir 📖🔍
 🎯 Amacımız:
 Sizi doğru seviyeden başlatıp en kısa sürede ilerletmek
 
+💪 Unutmayın:
+Düzenli çalışma ve istikrar başarıyı getirir
+
 👤 İsminizi & soyisminizi yazınız:"""
     )
     return NAME
@@ -45,13 +48,13 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# 🎧 استقبال الصوت (مسموح دائماً)
+# 🎧 استقبال الصوت
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     voice = update.message.voice.file_id
 
-    name = context.user_data.get("name", "İsim yok")
-    age = context.user_data.get("age", "Yaş yok")
+    name = context.user_data.get("name", "Bilinmiyor")
+    age = context.user_data.get("age", "Bilinmiyor")
 
     sent = await context.bot.send_voice(chat_id=GROUP_ID, voice=voice)
     student_messages[sent.message_id] = user.id
@@ -59,7 +62,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent.message_id}")],
         [InlineKeyboardButton("⚠️ Tekrar gönder", callback_data=f"return_{sent.message_id}")],
-        [InlineKeyboardButton("👤 İsim hatırlat", callback_data=f"remind_{sent.message_id}")]
+        [InlineKeyboardButton("👤 İsim & yaş hatırlat", callback_data=f"remind_{sent.message_id}")]
     ]
 
     await context.bot.send_message(
@@ -68,7 +71,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-    # رسالة للطالب
     await context.bot.send_message(
         chat_id=user.id,
         text="""🎧 Ses kaydınız başarıyla alındı
@@ -78,11 +80,11 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🌱 Sabırlı olun, her kayıt sizi daha iyiye taşır 🧡"""
     )
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(3)
 
     await context.bot.send_message(
         chat_id=user.id,
-        text="""📢 Kanalımızı paylaşabilirsiniz:
+        text="""📢 Daha fazla kişiye ulaşmak ve hayra vesile olmak için kanalımızı paylaşabilirsiniz:
 https://t.me/itkanakademi"""
     )
 
@@ -94,7 +96,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = int(query.data.split("_")[1])
 
     keyboard = [
-        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi)", callback_data=f"level_nurani_{message_id}")],
+        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi seviye)", callback_data=f"level_nurani_{message_id}")],
         [InlineKeyboardButton("🟡 Başlangıç", callback_data=f"level_beginner_{message_id}")],
         [InlineKeyboardButton("🟠 Orta Seviye", callback_data=f"level_intermediate_{message_id}")],
         [InlineKeyboardButton("🔴 İleri Seviye", callback_data=f"level_advanced_{message_id}")]
@@ -105,7 +107,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 📊 اختيار المستوى
+# 📊 تحديد المستوى
 async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -125,28 +127,28 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     # حذف الأزرار
-    await query.message.edit_reply_markup(reply_markup=None)
+    try:
+        await query.message.edit_reply_markup(reply_markup=None)
+    except:
+        pass
 
     # رسالة للمعلمة
-    await query.message.reply_text(
-        f"✅ Seviye gönderildi: {levels[level]}"
-    )
+    await query.message.reply_text(f"✅ Seviye gönderildi: {levels[level]}")
 
-    # رسالة للطالبة
+    name = context.user_data.get("name", "")
+
     await context.bot.send_message(
         chat_id=student_id,
         text=f"""📊 Seviye Sonucunuz:
 {levels[level]}
 
-📌 Değerlendirmeniz tamamlandı
-
-📚 Seviyenize uygun dersleri takip edebilirsiniz
+🌸 {name}, değerlendirmeniz tamamlandı
 
 📢 Kanalımız:
 https://t.me/itkanakademi"""
     )
 
-# 👤 تذكير الاسم
+# 👤 تذكير الاسم والعمر
 async def handle_remind(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -159,9 +161,9 @@ async def handle_remind(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=student_id,
-        text="""👤 Lütfen isminizi ve soyisminizi yazmayı unutmayın
+        text="""👤 Lütfen isminizi ve yaşınızı yazmayı unutmayın
 
-Bu, değerlendirmenizin daha doğru yapılabilmesi için gereklidir 🌸"""
+Bu bilgiler değerlendirme için gereklidir 🌸"""
     )
 
     await query.message.reply_text("📩 Hatırlatma gönderildi")
@@ -179,10 +181,16 @@ async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=student_id,
-        text="""⚠️ Lütfen tekrar gönderiniz
+        text="""⚠️ Lütfen dikkat
 
-📖 Fetih Suresi 29. ayet"""
+📖 İstenen ayet: Fetih Suresi 29. ayet
+
+🎧 Lütfen tekrar gönderiniz
+
+🤲 Allah yardımcınız olsun"""
     )
+
+    await query.message.reply_text("🔁 Öğrenciye geri gönderildi.")
 
 # 💬 رد المعلمة
 async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -201,7 +209,10 @@ async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 {update.message.text}
 
-🌸 Gayretiniz çok kıymetli 🧡"""
+🌸 Gayretiniz çok kıymetli, devam edin 🧡
+
+📢 Kanalımız:
+https://t.me/itkanakademi"""
         )
 
 # تشغيل
