@@ -22,7 +22,7 @@ NAME, AGE = range(2)  # الآن نطلب الاسم والعمر
 # 🌸 START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        """🌸 İtkan | Kur’an Akademisi'ne hoş geldiniz
+        """🔸️🔶️ İtkan | Kur’an Akademisi'ne hoş geldiniz
 
 Kur’an tilavetiniz özenle değerlendirilecektir 📖🔍
 
