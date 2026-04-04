@@ -21,12 +21,12 @@ NAME, AGE = range(2)
 
 # 🌿 تسجيل
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🌿 İsminizi yazınız:")
+    await update.message.reply_text("🧕🏻 İsminizi & soyjsminizi yazınız:")
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
-    await update.message.reply_text("🎂 Yaşınızı yazınız:")
+    await update.message.reply_text("🪻 Yaşınızı yazınız:")
     return AGE
 
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,7 +68,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = int(query.data.split("_")[1])
 
     keyboard = [
-        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye", callback_data=f"level_nurani_{message_id}")],
+        [InlineKeyboardButton("🔵📖 Kaide-i Nuraniyye (Başlangıç öncesi)", callback_data=f"level_nurani_{message_id}"),
         [InlineKeyboardButton("🟡 Başlangıç", callback_data=f"level_beginner_{message_id}")],
         [InlineKeyboardButton("🟠 Orta Seviye", callback_data=f"level_intermediate_{message_id}")],
         [InlineKeyboardButton("🔴 İleri Seviye", callback_data=f"level_advanced_{message_id}")]
