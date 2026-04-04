@@ -12,9 +12,9 @@ student_answers = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🌿 Hoş geldiniz!\n\n"
-        "Kur’an tilavetinizi geliştirme yolunda attığınız bu adım çok kıymetlidir ✨\n\n"
-        "🎙️ Lütfen Fetih Suresi 29. ayeti ses kaydı olarak gönderiniz.\n\n"
-        "📌 İTKAN | Kur’an Akademisi"
+        "Kur’an tilavetinizi geliştirme yolunda attığınız bu adım çok kıymetlidir \n\n"
+        "<b>🎙️ Lütfen Fetih Suresi 29. ayeti ses kaydı olarak gönderiniz.</b>"
+        "🔶 İTKAN | Kur’an Akademisi"
     )
 
 # 🎤 استقبال الفويس
