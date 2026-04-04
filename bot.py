@@ -5,9 +5,10 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, Cal
 TOKEN = os.getenv("BOT_TOKEN")
 GROUP_ID = int(os.getenv("GROUP_ID"))
 
+# تخزين مؤقت
 student_answers = {}
 
-# 🎯 بداية البوت
+# 🚀 بداية البوت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🌿 Hoş geldiniz!\n\n"
@@ -21,7 +22,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     voice = update.message.voice.file_id
 
-    context.user_data["user_id"] = user.id
+    # حفظ ID
+    context.user_data["student_id"] = user.id
 
     text = f"""🎧 Yeni tilavet gönderildi
 
@@ -50,8 +52,8 @@ async def handle_student_tajweed(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
 
     user_id = query.from_user.id
-    answer = "Aldı" if query.data == "student_yes" else "Almadı"
 
+    answer = "Aldı" if query.data == "student_yes" else "Almadı"
     student_answers[user_id] = answer
 
     await query.message.reply_text(
@@ -61,7 +63,7 @@ async def handle_student_tajweed(update: Update, context: ContextTypes.DEFAULT_T
         "📌 İTKAN | Kur’an Akademisi"
     )
 
-# 👩‍🏫 تقييم المعلمة (مستويات)
+# 👩‍🏫 تقييم المعلمة
 async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -88,6 +90,7 @@ Tecvid: {tajweed}
 
     await context.bot.send_message(chat_id=student_id, text=message)
 
+# تشغيل البوت
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
