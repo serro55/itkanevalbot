@@ -17,7 +17,7 @@ ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 student_messages = {}
 
-NAME = 0  # إزالة طلب العمر
+NAME, AGE = range(2)  # الآن نطلب الاسم والعمر
 
 # 🌸 START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -38,7 +38,11 @@ Düzenli çalışma ve istikrar başarıyı getirir
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
+    await update.message.reply_text("🪻 Lütfen yaşınızı yazınız:")
+    return AGE
 
+async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["age"] = update.message.text
     await update.message.reply_text(
         "🎧 Lütfen Fetih Suresi 29. ayetini ses kaydı olarak gönderiniz."
     )
@@ -50,9 +54,9 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     voice = update.message.voice.file_id
 
     name = context.user_data.get("name", "Bilinmiyor")
+    age = context.user_data.get("age", "Bilinmiyor")
 
     sent = await context.bot.send_voice(chat_id=GROUP_ID, voice=voice)
-
     student_messages[sent.message_id] = user.id
 
     keyboard = [
@@ -62,7 +66,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=GROUP_ID,
-        text=f"👤 {name}",
+        text=f"👤 {name} ({age})",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -117,6 +121,7 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     name = context.user_data.get("name", "")
+    age = context.user_data.get("age", "")
 
     levels = {
         "nurani": "🔵📖 Kaide-i Nuraniyye",
@@ -132,7 +137,6 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "advanced": "👑 İtkan seviyesinde tam yetkinlik ve ardından öğretmenlik yolculuğuna başlamak"
     }
 
-    # رسالة Nurani (تأسيس قوي)
     if level == "nurani":
         level_message = f"""📊 Seviye Sonucunuz:
 {levels[level]}
@@ -141,7 +145,6 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Her adımınız sizi daha güçlü ve bilinçli bir okuyucu yapacak 💪
 İyi bir başlangıç, ilerideki seviyelerin anahtarıdır 🔑
 """
-    # رسالة Advanced (الاتقان + الأمانة + كورس المعلمات)
     elif level == "advanced":
         level_message = f"""📊 Seviye Sonucunuz:
 {levels[level]}
@@ -151,10 +154,9 @@ Her adımınız sizi daha güçlü ve bilinçli bir okuyucu yapacak 💪
 Her öğrendiğiniz bilgi ve tilavetiniz bir emanettir 🕊️
 İyi bir temelle ilerleyerek Kur’an’ı en güzel şekilde okuyabilirsiniz
 
-🎯 Hedefiniz: Tam İtkan seviyesinde yetkinlik ve ardından öğretmenlik yolculuğuna başlamak 💛
+🎯 Hedefiniz: Tam İtkan seviyesinde yetkinlik ve ardından öğretmenlik yolculuğuna başlamak 🧡
 İtkan hazırlık kursuna katılarak öğrendiklerinizi aktarabilir ve başkalarına rehber olabilirsiniz 🌱
 """
-    # مستويات متوسطة و مبتدئ
     else:
         level_message = f"""📊 Seviye Sonucunuz:
 {levels[level]}
@@ -174,7 +176,7 @@ Her öğrendiğiniz bilgi ve tilavetiniz bir emanettir 🕊️
 ve sizin gelişiminiz adım adım takip edilecektir
 
 🌱 Bu yolculukta yalnız değilsiniz
-İtkan ailesi olarak her zaman yanınızdayız 💛
+İtkan ailesi olarak her zaman yanınızdayız 🧡
 
 📚 Seviyenize uygun dersleri ana kanalımızdan takip ederek bir üst seviyeye en kısa sürede ulaşabilirsiniz
 
@@ -240,6 +242,7 @@ conv = ConversationHandler(
     entry_points=[CommandHandler("start", start)],
     states={
         NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+        AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_age)],
     },
     fallbacks=[]
 )
