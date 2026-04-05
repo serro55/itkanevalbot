@@ -27,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 👤 اسم
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
-    await update.message.reply_text("🎂 Yaşınızı yazınız:")
+    await update.message.reply_text("🪻 Yaşınızı yazınız:")
     return AGE
 
 # 🎂 عمر
@@ -68,7 +68,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ⭐ عرض المستويات
+# ⭐ عرض التقييم
 async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -87,7 +87,29 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 🎯 التقييم + الرسائل التشجيعية
+# 🎯 النصوص لكل مستوى
+levels = {
+    "nurani": "🔵📖 Kaide-i Nuraniyye",
+    "beginner": "🟡 Başlangıç",
+    "intermediate": "🟠 Orta Seviye",
+    "advanced": "🔴 İleri Seviye"
+}
+
+messages = {
+    "nurani": """🌱 Güçlü bir başlangıç yapıyorsunuz.
+Başlangıcınızı sağlam kurmanız ilerlemenizi kolaylaştırır.""",
+
+    "beginner": """✨ Başlangıç seviyeniz güzel.
+Düzenli çalışma ile daha hızlı ilerleyebilirsiniz.""",
+
+    "intermediate": """📈 İyi bir gelişim içindesiniz.
+Daha fazla pratik ile seviye atlayabilirsiniz.""",
+
+    "advanced": """🏆 Mükemmel bir seviye!
+Artık öğrendiklerinizi uygulama ve öğretme aşamasındasınız."""
+}
+
+# 🎯 التقييم + الرسائل
 async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -99,20 +121,60 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not student_id:
         return
 
-    levels = {
-        "nurani": "🔵📖 Kaide-i Nuraniyye",
-        "beginner": "🟡 Başlangıç",
-        "intermediate": "🟠 Orta Seviye",
-        "advanced": "🔴 İleri Seviye"
-    }
-
-    messages = {
-        "nurani": "🌱 Çok güzel bir başlangıç! Kaideyi düzenli çalışmaya devam edin.",
-        "beginner": "✨ Başlangıç seviyeniz çok iyi, gelişiminiz devam ediyor.",
-        "intermediate": "📈 Seviyeniz güzel, daha fazla pratikle daha da ilerleyeceksiniz.",
-        "advanced": "🏆 Mükemmel! Artık ileri seviyede güçlü bir tilavetiniz var."
-    }
+    text = (
+        f"📊 Seviye\n\n"
+        f"{levels[level]}\n\n"
+        f"{messages[level]}\n\n"
+        f"🎯 Hedefinize odaklanın.\n\n"
+        f"📌 Kaydınız oluşturulmuştur.\n"
+        f"📚 Dersleri takip etmeye devam edin:\n"
+        f"https://t.me/itkanakademi"
+    )
 
     await context.bot.send_message(
         chat_id=student_id,
-        text=f"""📊 Seviye:
+        text=text
+    )
+
+    # حذف الأزرار + تأكيد للمعلمة
+    await query.edit_message_text(
+        text="✅ Değerlendirme gönderildi."
+    )
+
+# ⚠️ إعادة التسجيل
+async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    message_id = int(query.data.split("_")[1])
+    student_id = student_messages.get(message_id)
+
+    if not student_id:
+        return
+
+    await context.bot.send_message(
+        chat_id=student_id,
+        text="""⚠️ Lütfen Fetih Suresi 29. ayeti tekrar gönderiniz."""
+    )
+
+    await query.message.reply_text("🔁 Gönderildi")
+
+# تشغيل البوت
+app = ApplicationBuilder().token(TOKEN).build()
+
+conv = ConversationHandler(
+    entry_points=[CommandHandler("start", start)],
+    states={
+        NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+        AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_age)],
+    },
+    fallbacks=[]
+)
+
+app.add_handler(conv)
+app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+app.add_handler(CallbackQueryHandler(handle_rate, pattern="^rate_"))
+app.add_handler(CallbackQueryHandler(handle_level, pattern="^level_"))
+app.add_handler(CallbackQueryHandler(handle_return, pattern="^return_"))
+
+app.run_polling()
