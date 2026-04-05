@@ -55,7 +55,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🪻 Lütfen yaşınızı yazınız:")
     return AGE
 
-# 🎂 العمر
+# 🪻 العمر
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
 
@@ -128,7 +128,6 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await query.message.edit_reply_markup(reply_markup=None)
-
     await query.message.reply_text(
         "📊 Seviye seçiniz:",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -146,6 +145,7 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not student_id:
         return
 
+    name = "Bilinmiyor"  # نرسل الاسم للطالبة من user_data أو نترك افتراضي
     levels = {
         "nurani": "🔵📖 Kaide-i Nuraniyye",
         "beginner": "🟡 Başlangıç",
@@ -155,14 +155,14 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.message.edit_reply_markup(reply_markup=None)
 
+    # رسالة تأكيد للمعلمة
     await query.message.reply_text(
         f"✅ Değerlendirme gönderildi\n📊 Seçilen: {levels[level]}"
     )
 
-    await context.bot.send_message(
-        chat_id=student_id,
-        text=f"📊 Sonucunuz: {levels[level]}"
-    )
+    # رسالة للطالبة
+    level_message = f"📊 Seviye Sonucunuz:\n{levels[level]}"
+    await context.bot.send_message(chat_id=student_id, text=level_message)
 
 # ⚠️ إعادة إرسال الآية
 async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -186,7 +186,7 @@ async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.message.reply_text("🔁 Gönderildi")
 
-# 👤 تذكير بالاسم
+# 👤 تذكير بالاسم (زر خاص بالمعلمة فقط)
 async def handle_name_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -199,14 +199,16 @@ async def handle_name_reminder(update: Update, context: ContextTypes.DEFAULT_TYP
 
     await context.bot.send_message(
         chat_id=student_id,
-        text="""👤 Lütfen önce:
+        text="""👤 Lütfen dikkat
 
-1. İsminizi yazınız  
-2. Yaşınızı yazınız  
-3. Sonra tekrar ses gönderiniz 🎧"""
+İsminiz ve yaşınız eksikse lütfen:
+
+1️⃣ İsminizi yazınız  
+2️⃣ Yaşınızı yazınız  
+3️⃣ Sonra tekrar ses kaydınızı gönderiniz 🎧"""
     )
 
-    await query.message.reply_text("✅ İsim hatırlatma gönderildi")
+    await query.message.reply_text("✅ İsim hatırlatma mesajı gönderildi")
 
 # 💬 رد المعلمة
 async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -221,11 +223,7 @@ async def group_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if student_id:
         await context.bot.send_message(
             chat_id=student_id,
-            text=f"""📊 Değerlendirme:
-
-{update.message.text}
-
-🌸 Devam edin 🧡"""
+            text=f"📊 Değerlendirme:\n\n{update.message.text}\n\n🌸 Devam edin 🧡"
         )
 
 # 🚀 تشغيل
