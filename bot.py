@@ -12,40 +12,34 @@ from telegram.ext import (
 
 TOKEN = os.getenv("BOT_TOKEN")
 GROUP_ID = int(os.getenv("GROUP_ID"))
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 student_messages = {}
-student_answers = {}
 
 NAME, AGE = range(2)
 
-# 🌿 بدء
+# 🌿 البداية
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🌿 İsminizi yazınız:")
+    await update.message.reply_text("🌿 Hoş geldiniz")
+    await update.message.reply_text("👤 İsminizi yazınız:")
     return NAME
 
-# 👤 اسم
+# 👤 الاسم
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
     await update.message.reply_text("🪻 Yaşınızı yazınız:")
     return AGE
 
-# 🎂 عمر
+# 🪻 العمر
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["age"] = update.message.text
 
-    keyboard = [
-        [InlineKeyboardButton("📝 Bilgileri güncelle", callback_data="update_info")]
-    ]
-
     await update.message.reply_text(
-        "🎧 Fetih Suresi 29. ayeti gönderiniz.",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        "🎧 Lütfen Fetih Suresi 29. ayeti ses kaydı olarak gönderiniz."
     )
 
     return ConversationHandler.END
 
-# 🎤 الصوت
+# 🎤 استقبال الصوت
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     voice = update.message.voice.file_id
@@ -54,12 +48,12 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     age = context.user_data.get("age", "Bilinmiyor")
 
     sent = await context.bot.send_voice(chat_id=GROUP_ID, voice=voice)
-
     student_messages[sent.message_id] = user.id
 
     keyboard = [
         [InlineKeyboardButton("⭐ Değerlendir", callback_data=f"rate_{sent.message_id}")],
-        [InlineKeyboardButton("⚠️ Tekrar gönder", callback_data=f"return_{sent.message_id}")]
+        [InlineKeyboardButton("⚠️ Ayet tekrar iste", callback_data=f"return_{sent.message_id}")],
+        [InlineKeyboardButton("📝 İsim & yaş iste", callback_data=f"info_{sent.message_id}")]
     ]
 
     await context.bot.send_message(
@@ -68,7 +62,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ⭐ عرض التقييم
+# ⭐ عرض المستويات
 async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -87,7 +81,7 @@ async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# 🎯 النصوص لكل مستوى
+# 🎯 رسائل المستويات
 levels = {
     "nurani": "🔵📖 Kaide-i Nuraniyye",
     "beginner": "🟡 Başlangıç",
@@ -97,19 +91,50 @@ levels = {
 
 messages = {
     "nurani": """🌱 Güçlü bir başlangıç yapıyorsunuz.
-Başlangıcınızı sağlam kurmanız ilerlemenizi kolaylaştırır.""",
+Sağlam temel sizi ileri taşır.""",
 
-    "beginner": """✨ Başlangıç seviyeniz güzel.
-Düzenli çalışma ile daha hızlı ilerleyebilirsiniz.""",
+    "beginner": """🎉Güzel bir başlangıç yaptınız.
+Düzenli çalışma sizi orta seviyeye ulaştırır.""",
 
-    "intermediate": """📈 İyi bir gelişim içindesiniz.
-Daha fazla pratik ile seviye atlayabilirsiniz.""",
+    "intermediate": """📈 İyi bir seviyedesiniz.
+Daha fazla pratik ile ileri seviyeye geçebilirsiniz.""",
 
-    "advanced": """🏆 Mükemmel bir seviye!
-Artık öğrendiklerinizi uygulama ve öğretme aşamasındasınız."""
+    "advanced": """🏆 Çok güzel bir seviyedesiniz.
+
+Öğrendikleriniz bir emanettir, uygulamanız gerekir.
+Artık öğretmenlik yoluna hazırlanabilirsiniz."""
 }
 
-# 🎯 التقييم + الرسائل
+# 📤 إرسال 3 رسائل للطالبة
+async def send_feedback(context, student_id, level):
+    # 1️⃣ التقييم
+    await context.bot.send_message(
+        chat_id=student_id,
+        text=f"""📊 Seviyeniz
+
+{levels[level]}
+
+{messages[level]}"""
+    )
+
+    # 2️⃣ سجل
+    await context.bot.send_message(
+        chat_id=student_id,
+        text="""📌 Takip Kaydı
+
+Sizin için gelişim kaydı oluşturuldu.
+Adım adım ilerlemeniz takip edilecektir."""
+    )
+
+    # 3️⃣ القناة
+    await context.bot.send_message(
+        chat_id=student_id,
+        text="""📚 Dersler ve duyurular:
+
+https://t.me/itkanakademi"""
+    )
+
+# ⭐ التقييم
 async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -121,27 +146,16 @@ async def handle_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not student_id:
         return
 
-    text = (
-        f"📊 Seviye\n\n"
-        f"{levels[level]}\n\n"
-        f"{messages[level]}\n\n"
-        f"🎯 Hedefinize odaklanın.\n\n"
-        f"📌 Kaydınız oluşturulmuştur.\n"
-        f"📚 Dersleri takip etmeye devam edin:\n"
-        f"https://t.me/itkanakademi"
-    )
+    await send_feedback(context, student_id, level)
 
-    await context.bot.send_message(
-        chat_id=student_id,
-        text=text
-    )
-
-    # حذف الأزرار + تأكيد للمعلمة
+    # حذف الأزرار + عرض النتيجة للمعلمة
     await query.edit_message_text(
-        text="✅ Değerlendirme gönderildi."
+        text=f"""✅ Değerlendirme gönderildi
+
+📊 Seviye: {levels[level]}"""
     )
 
-# ⚠️ إعادة التسجيل
+# ⚠️ إعادة الآية
 async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -157,9 +171,30 @@ async def handle_return(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text="""⚠️ Lütfen Fetih Suresi 29. ayeti tekrar gönderiniz."""
     )
 
-    await query.message.reply_text("🔁 Gönderildi")
+    await query.message.reply_text("✅ Gönderildi")
 
-# تشغيل البوت
+# 📝 طلب الاسم والعمر
+async def handle_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    message_id = int(query.data.split("_")[1])
+    student_id = student_messages.get(message_id)
+
+    if not student_id:
+        return
+
+    await context.bot.send_message(
+        chat_id=student_id,
+        text="""📌 Lütfen tekrar yazınız:
+
+👤 İsminiz
+🪻 Yaşınız"""
+    )
+
+    await query.message.reply_text("✅ İstek gönderildi")
+
+# تشغيل
 app = ApplicationBuilder().token(TOKEN).build()
 
 conv = ConversationHandler(
@@ -173,8 +208,10 @@ conv = ConversationHandler(
 
 app.add_handler(conv)
 app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+
 app.add_handler(CallbackQueryHandler(handle_rate, pattern="^rate_"))
 app.add_handler(CallbackQueryHandler(handle_level, pattern="^level_"))
 app.add_handler(CallbackQueryHandler(handle_return, pattern="^return_"))
+app.add_handler(CallbackQueryHandler(handle_info, pattern="^info_"))
 
 app.run_polling()
