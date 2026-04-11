@@ -96,16 +96,6 @@ inşaAllah kanal linkini aileniz ve arkadaşlarınızla paylaşabilirsiniz.
 BarakAllah fikom.""",
         reply_markup=InlineKeyboardMarkup(student_keyboard)
     )
-    await context.bot.send_message(
-    chat_id=user.id,
-    text="""📩 Mesajınız bize ulaştı
-
-🌷 MaşaAllah, gayretiniz çok kıymetli.
-Allah izniyle en kısa sürede değerlendirilecek ve size dönüş yapılacaktır.
-
-İnşaAllah bu yolculukta adım adım ilerleyeceksiniz.
-Allah muvaffak eylesin 🤍"""
-    )
 
 # ⭐ عرض المستويات
 async def handle_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
